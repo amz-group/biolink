@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Link in Bio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
+  <!-- QR Code library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --text: #f0f0f8;
+      --muted: rgba(240,240,248,0.55);
+      --card: rgba(255,255,255,0.07);
+      --card-hover: rgba(255,255,255,0.12);
+      --border: rgba(255,255,255,0.1);
+      --border-hover: rgba(255,255,255,0.25);
+      --accent1: #9b5de5;
+      --accent2: #f15bb5;
+      --accent3: #00bbf9;
+      --accent4: #00f5d4;
+      --modal-bg: #13131f;
+    }
+
+    body.light-mode {
+      --text: #1a1a2e;
+      --muted: rgba(26,26,46,0.55);
+      --card: rgba(0,0,0,0.06);
+      --card-hover: rgba(0,0,0,0.1);
+      --border: rgba(0,0,0,0.1);
+      --border-hover: rgba(0,0,0,0.25);
+      --modal-bg: #ffffff;
+    }
+    body.light-mode #bgLayer { background: #f0f2f8 !important; }
+    body.light-mode #bgOverlay { background: rgba(255,255,255,0.35) !important; }
+
+    html { scroll-behavior: smooth; }
+    #bgLayer   { position:fixed;inset:0;z-index:0;background:#0a0a0f;background-size:cover;background-position:center;background-repeat:no-repeat;transition:background .5s ease; }
+    #bgOverlay { position:fixed;inset:0;z-index:1;background:rgba(0,0,0,0.45);transition:opacity .4s; }
+    #bgGrid    { position:fixed;inset:0;z-index:2;background-image:linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);background-size:40px 40px;pointer-events:none; }
+
+    body {
+      font-family:'Tajawal',sans-serif; color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column; align-items:center;
+      padding:40px 16px 80px; position:relative; overflow-x:hidden;
+    }
+    .container { position:relative;z-index:3;width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center; }
+
+    /* ══ SHARE/LION LOGO top-left ══ */
+    .lion-logo {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 40;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(155,93,229,0.25), rgba(241,91,181,0.25));
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+      box-shadow: 0 4px 20px rgba(155,93,229,0.2);
+      animation: fadeDown .6s ease both;
+    }
+    .lion-logo:hover {
+      transform: scale(1.1) rotate(-5deg);
+      box-shadow: 0 8px 30px rgba(155,93,229,0.4);
+      border-color: rgba(155,93,229,0.5);
+    }
+
+    /* Avatar */
+    .avatar-wrap { position:relative;margin-bottom:20px;animation:fadeDown .7s ease both; }
+    .avatar-ring {
+      width:110px;height:110px;border-radius:50%;padding:3px;
+      background:linear-gradient(135deg,var(--accent1),var(--accent2),var(--accent3),var(--accent4));
+      background-size:300% 300%;animation:gradSpin 4s linear infinite;
+    }
+    @keyframes gradSpin{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    .avatar-inner {
+      width:100%;height:100%;border-radius:50%;
+      background:linear-gradient(135deg,#1a1a2e,#16213e);
+      display:flex;align-items:center;justify-content:center;
+      font-size:42px;position:relative;overflow:hidden;
+    }
+    .avatar-inner img { width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0; }
+    .avatar-edit-overlay {
+      display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);
+      border-radius:50%;align-items:center;justify-content:center;font-size:22px;
+    }
+    .admin-mode .avatar-inner { cursor:pointer; }
+    .admin-mode .avatar-inner .avatar-edit-overlay { display:flex; }
+
+    /* Profile */
+    .profile-name   { font-size:26px;font-weight:700;letter-spacing:-.5px;text-align:center;animation:fadeDown .8s .1s ease both; }
+    .profile-handle { font-size:14px;color:var(--muted);margin-top:4px;text-align:center;animation:fadeDown .8s .15s ease both; }
+    .profile-bio    { font-size:14px;color:var(--muted);text-align:center;line-height:1.7;margin-top:12px;max-width:340px;animation:fadeDown .8s .2s ease both; }
+    .admin-mode .profile-name,.admin-mode .profile-handle,.admin-mode .profile-bio { cursor:pointer;border-radius:8px;padding:2px 6px;transition:background .2s; }
+    .admin-mode .profile-name:hover,.admin-mode .profile-handle:hover,.admin-mode .profile-bio:hover { background:rgba(155,93,229,.15); }
+
+    /* Socials */
+    .socials { display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center;animation:fadeDown .8s .25s ease both; }
+    .social-btn { width:42px;height:42px;border-radius:12px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;text-decoration:none;color:var(--text);transition:all .25s cubic-bezier(.34,1.56,.64,1); }
+    .social-btn:hover { transform:translateY(-4px) scale(1.1);border-color:var(--border-hover);background:var(--card-hover);box-shadow:0 8px 25px rgba(155,93,229,.3); }
+    .social-wrap { position:relative;display:inline-block; }
+    .social-del { position:absolute;top:-6px;right:-6px;background:#ff6b6b;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;border:none; }
+
+    .divider { width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:28px 0; }
+    .section-label { font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);align-self:flex-start;margin-bottom:12px; }
+
+    /* Links */
+    .links-list { width:100%;display:flex;flex-direction:column;gap:10px; }
+    .link-card {
+      width:100%;background:var(--card);border:1px solid var(--border);border-radius:16px;
+      padding:16px 20px;display:flex;align-items:center;gap:14px;
+      color:var(--text);transition:all .25s cubic-bezier(.34,1.56,.64,1);
+      position:relative;overflow:hidden;animation:fadeUp .6s both;cursor:pointer;
+      backdrop-filter:blur(8px);
+    }
+    .link-card::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent1),var(--accent2));opacity:0;transition:opacity .3s;z-index:0; }
+    .link-card:hover { transform:translateY(-3px) scale(1.01);border-color:var(--border-hover);box-shadow:0 12px 40px rgba(155,93,229,.25); }
+    .link-card:hover::before { opacity:.08; }
+    .link-card > * { position:relative;z-index:1; }
+    .link-icon  { width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;background:rgba(255,255,255,.07);overflow:hidden; }
+    .link-icon img { width:100%;height:100%;object-fit:cover;border-radius:12px; }
+    .link-text  { flex:1; }
+    .link-title { font-size:15px;font-weight:600; }
+    .link-desc  { font-size:12px;color:var(--muted);margin-top:2px; }
+    .link-arrow { font-size:16px;color:var(--muted); }
+    .admin-actions { display:flex;gap:6px;align-items:center; }
+    .icon-btn { background:none;border:none;cursor:pointer;font-size:17px;padding:4px 7px;border-radius:8px;transition:background .2s;color:var(--muted); }
+    .icon-btn:hover     { background:rgba(255,255,255,.1);color:var(--text); }
+    .icon-btn.del:hover { background:rgba(255,80,80,.15);color:#ff6b6b; }
+
+    .add-link-btn { width:100%;background:transparent;border:1.5px dashed var(--border);border-radius:16px;padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:14px;font-family:'Tajawal',sans-serif;cursor:pointer;transition:all .2s;margin-top:4px; }
+    .add-link-btn:hover { border-color:var(--accent1);color:var(--accent1);background:rgba(155,93,229,.06); }
+
+    .footer { margin-top:40px;font-size:12px;color:rgba(255,255,255,.25);text-align:center; }
+
+    /* Sync status indicator */
+    .sync-status {
+      position:fixed;top:16px;right:16px;z-index:40;
+      background:rgba(10,10,20,.85);backdrop-filter:blur(12px);
+      border:1px solid var(--border);border-radius:12px;
+      padding:6px 12px;font-size:12px;color:var(--muted);
+      display:flex;align-items:center;gap:6px;
+      opacity:0;pointer-events:none;transition:opacity .3s;
+    }
+    .sync-status.show { opacity:1; }
+    .sync-dot { width:7px;height:7px;border-radius:50%;background:var(--accent4); }
+    .sync-dot.syncing { background:#f15bb5;animation:pulse .8s infinite; }
+    .sync-dot.error   { background:#ff6b6b; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    /* ── Small admin button ── */
+    .admin-float-btn {
+      position:fixed;bottom:16px;left:16px;z-index:40;
+      width:38px;height:38px;border-radius:12px;
+      background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.12);
+      display:flex;align-items:center;justify-content:center;
+      font-size:16px;cursor:pointer;transition:all .2s;
+      color:var(--muted);
+    }
+    .admin-float-btn:hover { background:rgba(155,93,229,0.2);border-color:var(--accent1);color:var(--text);transform:scale(1.08); }
+
+    /* ── Admin bar ── */
+    .admin-bar {
+      position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+      background:rgba(10,10,20,.92);backdrop-filter:blur(16px);
+      border:1px solid var(--border);border-radius:20px;
+      padding:10px 16px;display:flex;gap:8px;align-items:center;
+      z-index:50;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:fadeUp .4s ease;
+      flex-wrap:wrap;justify-content:center;
+    }
+    .admin-bar-label { font-size:12px;color:var(--muted); }
+    .bar-btn { padding:8px 14px;border-radius:12px;border:none;cursor:pointer;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;transition:all .2s; }
+    .bar-btn.primary { background:linear-gradient(135deg,var(--accent1),var(--accent2));color:#fff; }
+    .bar-btn.ghost   { background:rgba(255,255,255,.07);color:var(--muted); }
+    .bar-btn.ghost:hover { background:rgba(255,255,255,.14);color:var(--text); }
+
+    /* Dark mode toggle */
+    .toggle-wrap { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted); }
+    .toggle { position:relative;width:36px;height:20px;cursor:pointer; }
+    .toggle input { display:none; }
+    .toggle-track { width:36px;height:20px;border-radius:10px;background:rgba(255,255,255,.15);transition:background .3s; }
+    .toggle input:checked + .toggle-track { background:var(--accent1); }
+    .toggle-knob { position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .3s; }
+    .toggle input:checked ~ .toggle-knob { transform:translateX(16px); }
+
+    /* Modals */
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(10px);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s; }
+    .modal-overlay.open { opacity:1;pointer-events:all; }
+    .modal { background:var(--modal-bg);border:1px solid var(--border);border-radius:24px;padding:28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;transform:scale(.92);transition:transform .25s cubic-bezier(.34,1.56,.64,1); }
+    .modal-overlay.open .modal { transform:scale(1); }
+    .modal h3 { font-size:18px;font-weight:700;margin-bottom:20px;color:var(--text); }
+    .modal label { font-size:12px;color:var(--muted);display:block;margin-bottom:5px;margin-top:14px; }
+    .modal input,.modal textarea,.modal select { width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;outline:none;transition:border-color .2s; }
+    .modal input:focus,.modal textarea:focus { border-color:var(--accent1); }
+    .modal textarea { resize:vertical;min-height:80px; }
+    .modal-actions { display:flex;gap:10px;margin-top:22px; }
+    .btn-primary { flex:1;padding:12px;background:linear-gradient(135deg,var(--accent1),var(--accent2));border:none;border-radius:12px;color:#fff;font-family:'Tajawal',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .15s; }
+    .btn-primary:hover { opacity:.9;transform:scale(1.02); }
+    .btn-cancel { padding:12px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Tajawal',sans-serif;font-size:15px;cursor:pointer; }
+    .btn-cancel:hover { color:var(--text);border-color:var(--border-hover); }
+
+    /* Avatar upload */
+    .upload-area {
+      border:2px dashed var(--border);border-radius:14px;padding:20px;
+      text-align:center;cursor:pointer;transition:all .2s;margin-top:8px;
+    }
+    .upload-area:hover { border-color:var(--accent1);background:rgba(155,93,229,.06); }
+    .upload-area input { display:none; }
+    .upload-preview { width:70px;height:70px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:block; }
+
+    /* ── Icon type tabs ── */
+    .icon-tabs { display:flex;gap:8px;margin-top:14px;margin-bottom:4px; }
+    .icon-tab { flex:1;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s; }
+    .icon-tab.active { border-color:var(--accent1);background:rgba(155,93,229,.15);color:var(--text); }
+    .icon-section { display:none; }
+    .icon-section.active { display:block; }
+
+    /* Icon image upload */
+    .icon-upload-area {
+      border:2px dashed var(--border);border-radius:12px;padding:16px;
+      text-align:center;cursor:pointer;transition:all .2s;margin-top:8px;
+    }
+    .icon-upload-area:hover { border-color:var(--accent1);background:rgba(155,93,229,.06); }
+    .icon-upload-area input { display:none; }
+    .icon-upload-preview-wrap { display:none;flex-direction:column;align-items:center;gap:8px; }
+    .icon-upload-preview { width:56px;height:56px;border-radius:12px;object-fit:cover; }
+
+    /* Social grid */
+    .social-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px; }
+    .social-option { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:all .2s;font-size:12px;color:var(--muted); }
+    .social-option:hover,.social-option.selected { border-color:var(--accent1);background:rgba(155,93,229,.12);color:var(--text); }
+
+    /* BG */
+    .bg-section { margin-top:18px; }
+    .bg-section h4 { font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;letter-spacing:.5px; }
+    .color-presets { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px; }
+    .color-swatch { width:36px;height:36px;border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all .2s;flex-shrink:0; }
+    .color-swatch:hover,.color-swatch.active { border-color:#fff;transform:scale(1.1); }
+    .color-swatch.custom-pick { display:flex;align-items:center;justify-content:center;background:var(--card);border-color:var(--border);font-size:18px; }
+    #colorPickerInput { display:none; }
+    .gradient-presets { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px; }
+    .gradient-swatch { width:64px;height:36px;border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all .2s; }
+    .gradient-swatch:hover,.gradient-swatch.active { border-color:#fff;transform:scale(1.05); }
+    .img-upload-area { border:2px dashed var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;margin-top:4px; }
+    .img-upload-area:hover { border-color:var(--accent1);background:rgba(155,93,229,.06); }
+    .img-upload-area input { display:none; }
+    .overlay-row { display:flex;align-items:center;gap:10px;margin-top:10px; }
+    .overlay-row span { font-size:12px;color:var(--muted); }
+    input[type=range] { flex:1;accent-color:var(--accent1); }
+
+    .login-err { font-size:13px;color:#ff6b6b;text-align:center;min-height:18px; }
+
+    /* ══ SHARE MODAL ══ */
+    .share-modal-inner { text-align:center; }
+    .share-qr-box {
+      margin:20px auto;
+      width:180px;height:180px;
+      background:#fff;border-radius:16px;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 30px rgba(155,93,229,.3);
+      padding:12px;
+    }
+    #qrCanvas { width:156px;height:156px; }
+    .share-url-box {
+      background:rgba(255,255,255,.06);border:1px solid var(--border);
+      border-radius:12px;padding:10px 14px;font-size:13px;color:var(--muted);
+      word-break:break-all;margin-top:8px;text-align:left;direction:ltr;
+    }
+    .share-copy-btn {
+      margin-top:12px;width:100%;padding:12px;
+      background:linear-gradient(135deg,var(--accent1),var(--accent2));
+      border:none;border-radius:12px;color:#fff;
+      font-family:'Tajawal',sans-serif;font-size:15px;font-weight:600;
+      cursor:pointer;transition:opacity .2s,transform .15s;
+    }
+    .share-copy-btn:hover { opacity:.9;transform:scale(1.01); }
+    .share-copy-btn.copied { background:linear-gradient(135deg,#00f5d4,#00bbf9); }
+    .share-btns { display:flex;gap:8px;margin-top:10px; }
+    .share-btn-sm {
+      flex:1;padding:10px;border-radius:12px;border:1px solid var(--border);
+      background:var(--card);color:var(--muted);font-family:'Tajawal',sans-serif;
+      font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;
+    }
+    .share-btn-sm:hover { border-color:var(--border-hover);color:var(--text); }
+    .share-download-btn {
+      flex:1;padding:10px;border-radius:12px;
+      background:rgba(0,187,249,.15);border:1px solid rgba(0,187,249,.3);
+      color:var(--accent3);font-family:'Tajawal',sans-serif;
+      font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;
+    }
+    .share-download-btn:hover { background:rgba(0,187,249,.25); }
+
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<div id="bgLayer"></div>
+<div id="bgOverlay"></div>
+<div id="bgGrid"></div>
+
+<!-- Sync status -->
+<div class="sync-status" id="syncStatus">
+  <div class="sync-dot" id="syncDot"></div>
+  <span id="syncText">سەیڤکرا</span>
+</div>
+
+<!-- ══ SHARE BUTTON - top left (lion replaced) ══ -->
+<div class="lion-logo" title="هەڵوەشاندن و QR کۆد" onclick="openShareModal()">🦁</div>
+
+<!-- ══════════════ MAIN PAGE ══════════════ -->
+<div class="container" id="mainPage">
+
+  <div class="avatar-wrap">
+    <div class="avatar-ring">
+      <div class="avatar-inner" id="avatarEl">
+        <span id="avatarEmoji">🌟</span>
+        <img id="avatarImg" src="" alt="" style="display:none;"/>
+        <div class="avatar-edit-overlay">✏️</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-name"   id="profileName">ناوی تۆ</div>
+  <div class="profile-handle" id="profileHandle">@username</div>
+  <div class="profile-bio"    id="profileBio">بایۆی خۆت لێرە بنووسە ✨</div>
+
+  <div class="socials" id="socialsRow"></div>
+  <button class="add-link-btn" id="addSocialBtn" onclick="openModal('addSocial')"
+    style="margin-top:12px;max-width:220px;display:none;">+ زیادکردنی سۆشیاڵ میدیا</button>
+
+  <div class="divider"></div>
+  <div class="section-label">🔗 لینکەکانم</div>
+  <div class="links-list" id="linksList"></div>
+  <button class="add-link-btn" id="addLinkBtn" onclick="openModal('addLink')" style="display:none;">＋ زیادکردنی لینکێکی تازە</button>
+
+  <div class="footer" id="pageFooter">POWER BY AMZ GROUP</div>
+</div>
+
+<!-- Admin float btn -->
+<button class="admin-float-btn" id="adminFloatBtn" onclick="onAdminBtnClick()" title="پانێڵی ئەدمین">⚙️</button>
+
+<!-- Admin bar -->
+<div class="admin-bar" id="adminBar" style="display:none;">
+  <span class="admin-bar-label">🛠️ ئەدمین</span>
+  <button class="bar-btn ghost" onclick="openModal('bgCustom')">🎨 باگراوند</button>
+  <div class="toggle-wrap">
+    <span>☀️</span>
+    <label class="toggle">
+      <input type="checkbox" id="darkToggle" onchange="toggleDark(this.checked)"/>
+      <div class="toggle-track"></div>
+      <div class="toggle-knob"></div>
+    </label>
+    <span>🌙</span>
+  </div>
+  <button class="bar-btn ghost" onclick="openModal('changePass')">🔑</button>
+  <button class="bar-btn ghost" onclick="logout()">↩</button>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- Share / QR Modal -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal share-modal-inner">
+    <h3>🔗 هەڵوەشاندن و QR کۆد</h3>
+    <div class="share-qr-box">
+      <div id="qrCanvas"></div>
+    </div>
+    <div class="share-url-box" id="shareUrlBox"></div>
+    <button class="share-copy-btn" id="shareCopyBtn" onclick="copyShareLink()">📋 کۆپیکردنی لینک</button>
+    <div class="share-btns">
+      <button class="share-btn-sm" onclick="shareToWhatsApp()">💬 واتساپ</button>
+      <button class="share-btn-sm" onclick="shareToTelegram()">✈️ تێلێگرام</button>
+      <button class="share-download-btn" onclick="downloadQR()">⬇️ داونلۆدی QR</button>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" style="width:100%;" onclick="closeModal('share')">داخستن</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Login -->
+<div class="modal-overlay" id="modal-adminLogin">
+  <div class="modal">
+    <h3>🔐 داخلبوونی ئەدمین</h3>
+    <label>یوزەرنەیم</label>
+    <input id="loginUser" type="text" placeholder="admin" autocomplete="username"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <label>پاسوۆرد</label>
+    <input id="loginPass" type="password" placeholder="••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div class="login-err" id="loginErr"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('adminLogin')">پاشگەزبوونەوە</button>
+      <button class="btn-primary" onclick="doLogin()">داخلبوون ⟶</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="modal">
+    <h3>✏️ دەستکاری پرۆفایل</h3>
+    <label>ناو</label><input id="in-name" placeholder="ناوی تۆ"/>
+    <label>یوزەرنەیم</label><input id="in-handle" placeholder="@username"/>
+    <label>بایۆ</label><textarea id="in-bio" placeholder="خۆت بناسێنە..."></textarea>
+    <label>وێنەی پرۆفایل</label>
+    <div class="upload-area" onclick="document.getElementById('avatarFileInput').click()">
+      <img id="avatarUploadPreview" class="upload-preview" src="" alt="" style="display:none;"/>
+      <div id="avatarUploadHint">
+        <div style="font-size:28px;margin-bottom:6px;">📷</div>
+        <div style="font-size:13px;color:var(--muted);">کلیک بکە بۆ ئەپلۆدکردنی وێنە</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, WEBP</div>
+      </div>
+      <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarUpload(this)"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('profile');pendingAvatar='';">پاشگەزبوونەوە</button>
+      <button class="btn-primary" onclick="saveProfile()">پاراستن ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Link -->
+<div class="modal-overlay" id="modal-addLink">
+  <div class="modal">
+    <h3>🔗 زیادکردنی لینکێکی تازە</h3>
+    <label>سەردێڕ</label><input id="in-link-title" placeholder="بۆ نموونە: ئینستاگرامم"/>
+    <label>باسکردن (ئارەزوومەندانە)</label><input id="in-link-desc" placeholder="کورتبیری لینکەکە"/>
+    <label>URL</label><input id="in-link-url" placeholder="https://..."/>
+
+    <label>جۆری ئایکۆن</label>
+    <div class="icon-tabs">
+      <button class="icon-tab active" onclick="switchIconTab('add','emoji',this)">ئیمۆجی</button>
+      <button class="icon-tab" onclick="switchIconTab('add','image',this)">وێنە</button>
+    </div>
+
+    <div class="icon-section active" id="add-tab-emoji">
+      <label>ئایکۆن (ئیمۆجی)</label>
+      <input id="in-link-icon" placeholder="🔗" maxlength="4"/>
+    </div>
+
+    <div class="icon-section" id="add-tab-image">
+      <div class="icon-upload-area" onclick="document.getElementById('in-link-icon-img').click()">
+        <div class="icon-upload-preview-wrap" id="add-icon-preview-wrap">
+          <img class="icon-upload-preview" id="add-icon-preview-img" src="" alt=""/>
+          <span style="font-size:12px;color:var(--muted);">کلیک بکە بۆ گۆڕین</span>
+        </div>
+        <div id="add-icon-upload-hint">
+          <div style="font-size:24px;margin-bottom:6px;">🖼️</div>
+          <div style="font-size:13px;color:var(--muted);">کلیک بکە بۆ ئەپلۆدکردنی وێنەی ئایکۆن</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, WEBP — پێشنیار: ١:١</div>
+        </div>
+        <input type="file" id="in-link-icon-img" accept="image/*" onchange="handleIconImgUpload(this,'add')"/>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('addLink')">پاشگەزبوونەوە</button>
+      <button class="btn-primary" onclick="saveLink()">زیادکردن ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Link -->
+<div class="modal-overlay" id="modal-editLink">
+  <div class="modal">
+    <h3>✏️ دەستکاری لینک</h3>
+    <input type="hidden" id="edit-link-id"/>
+    <label>سەردێڕ</label><input id="edit-link-title"/>
+    <label>باسکردن</label><input id="edit-link-desc"/>
+    <label>URL</label><input id="edit-link-url"/>
+
+    <label>جۆری ئایکۆن</label>
+    <div class="icon-tabs">
+      <button class="icon-tab active" id="edit-tab-emoji-btn" onclick="switchIconTab('edit','emoji',this)">ئیمۆجی</button>
+      <button class="icon-tab" id="edit-tab-image-btn" onclick="switchIconTab('edit','image',this)">وێنە</button>
+    </div>
+
+    <div class="icon-section active" id="edit-tab-emoji">
+      <label>ئایکۆن (ئیمۆجی)</label>
+      <input id="edit-link-icon" maxlength="4"/>
+    </div>
+
+    <div class="icon-section" id="edit-tab-image">
+      <div class="icon-upload-area" onclick="document.getElementById('edit-link-icon-img').click()">
+        <div class="icon-upload-preview-wrap" id="edit-icon-preview-wrap">
+          <img class="icon-upload-preview" id="edit-icon-preview-img" src="" alt=""/>
+          <span style="font-size:12px;color:var(--muted);">کلیک بکە بۆ گۆڕین</span>
+        </div>
+        <div id="edit-icon-upload-hint">
+          <div style="font-size:24px;margin-bottom:6px;">🖼️</div>
+          <div style="font-size:13px;color:var(--muted);">کلیک بکە بۆ ئەپلۆدکردنی وێنەی ئایکۆن</div>
+        </div>
+        <input type="file" id="edit-link-icon-img" accept="image/*" onchange="handleIconImgUpload(this,'edit')"/>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editLink')">پاشگەزبوونەوە</button>
+      <button class="btn-primary" onclick="updateLink()">پاراستن ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Social -->
+<div class="modal-overlay" id="modal-addSocial">
+  <div class="modal">
+    <h3>📲 زیادکردنی سۆشیاڵ میدیا</h3>
+    <div class="social-grid" id="socialGrid"></div>
+    <label style="margin-top:18px;">لینکی ئەکاونتەکەت</label>
+    <input id="in-social-url" placeholder="https://instagram.com/username"/>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('addSocial')">پاشگەزبوونەوە</button>
+      <button class="btn-primary" onclick="saveSocial()">زیادکردن ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- BG Customizer -->
+<div class="modal-overlay" id="modal-bgCustom">
+  <div class="modal">
+    <h3>🎨 دیزاینی باگراوند</h3>
+    <div class="bg-section">
+      <h4>ڕەنگی یەکلا</h4>
+      <div class="color-presets" id="colorPresets">
+        <label class="color-swatch custom-pick" title="ڕەنگی خۆت هەڵبژێرە">🎨
+          <input type="color" id="colorPickerInput" onchange="applyColorPick(this.value)"/>
+        </label>
+      </div>
+    </div>
+    <div class="bg-section">
+      <h4>گرادیەنت</h4>
+      <div class="gradient-presets" id="gradPresets"></div>
+    </div>
+    <div class="bg-section">
+      <h4>وێنەی باگراوند</h4>
+      <div class="img-upload-area" onclick="document.getElementById('bgFileInput').click()">
+        <div style="font-size:24px;margin-bottom:6px;">🖼️</div>
+        <div style="font-size:13px;color:var(--muted);">کلیک بکە بۆ ئەپلۆدکردنی وێنەی باگراوند</div>
+        <input type="file" id="bgFileInput" accept="image/*" onchange="uploadBgImg(this)"/>
+      </div>
+    </div>
+    <div class="bg-section">
+      <h4>تیرەیی باگراوند</h4>
+      <div class="overlay-row">
+        <span>ڕوون</span>
+        <input type="range" id="overlaySlider" min="0" max="90" value="45" oninput="applyOverlay(this.value)"/>
+        <span>تاریک</span>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn-cancel" onclick="closeModal('bgCustom')">داخستن</button>
+      <button class="btn-primary" onclick="saveBgSettings()">پاراستن ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password -->
+<div class="modal-overlay" id="modal-changePass">
+  <div class="modal">
+    <h3>🔑 گۆڕینی زانیارییەکانی داخلبوون</h3>
+    <label>یوزەرنەیمی نوێ</label><input id="new-user" placeholder="admin"/>
+    <label>پاسوۆردی نوێ</label><input id="new-pass" type="password" placeholder="••••••"/>
+    <label>دووبارە</label><input id="new-pass2" type="password" placeholder="••••••"/>
+    <div class="login-err" id="passErr"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('changePass')">پاشگەزبوونەوە</button>
+      <button class="btn-primary" onclick="changePass()">پاراستن ✓</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══ CONSTANTS ═══ */
+const CREDS_KEY = 'bio_creds';
+const DATA_KEY  = 'bio_data';
+const BG_KEY    = 'bio_bg';
+
+const SOCIALS_DEF = [
+  {id:'instagram',name:'Instagram',emoji:'📸'},
+  {id:'tiktok',   name:'TikTok',   emoji:'🎵'},
+  {id:'twitter',  name:'X/Twitter',emoji:'🐦'},
+  {id:'youtube',  name:'YouTube',  emoji:'▶️'},
+  {id:'telegram', name:'Telegram', emoji:'✈️'},
+  {id:'whatsapp', name:'WhatsApp', emoji:'💬'},
+  {id:'snapchat', name:'Snapchat', emoji:'👻'},
+  {id:'facebook', name:'Facebook', emoji:'👍'},
+  {id:'linkedin', name:'LinkedIn', emoji:'💼'},
+  {id:'pinterest',name:'Pinterest',emoji:'📌'},
+  {id:'github',   name:'GitHub',   emoji:'💻'},
+  {id:'website',  name:'Website',  emoji:'🌐'},
+];
+const COLOR_PRESETS = ['#0a0a0f','#0f0c29','#1a1a2e','#0d1117','#1e3a5f','#1a0a2e','#0a2e1a','#2e0a0a','#1c1c1c','#2d1b69','#0b3d0b','#3d0b0b'];
+const GRAD_PRESETS  = [
+  'linear-gradient(135deg,#0f0c29,#302b63,#24243e)',
+  'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
+  'linear-gradient(135deg,#0a0a0f,#1a0a2e,#2e0a1a)',
+  'linear-gradient(135deg,#0d1117,#161b22,#21262d)',
+  'linear-gradient(135deg,#0b3d0b,#1a2e0a,#2e1a0a)',
+  'linear-gradient(135deg,#3d0b0b,#2e0a1a,#1a0a2e)',
+  'linear-gradient(135deg,#000428,#004e92)',
+  'linear-gradient(135deg,#1e3c72,#2a5298)',
+  'linear-gradient(135deg,#0f2027,#203a43,#2c5364)',
+  'linear-gradient(135deg,#373b44,#4286f4)',
+];
+
+/* ═══ STATE ═══ */
+let isAdmin = false;
+let nextId  = 100;
+let selectedSocial = null;
+let pendingAvatar  = '';
+let pendingIconImg = { add: '', edit: '' };
+let isDark = true;
+let db = null; // Firestore instance
+
+let profile = { name:'ناوی تۆ', handle:'@username', bio:'بایۆی خۆت لێرە بنووسە ✨', avatar:'' };
+let links   = [
+  {id:1,title:'یوتیوبی من',  desc:'ویدیۆکانم لێرەن',       url:'https://youtube.com',  icon:'▶️', iconImg:'', firestoreId:''},
+  {id:2,title:'وێبسایتی من', desc:'پۆرتفۆلیۆ و پرۆژەکانم', url:'https://example.com',  icon:'🌐', iconImg:'', firestoreId:''},
+];
+let socials = [];
+let bgState = { type:'default', value:'', overlay:45 };
+
+/* ═══ SYNC STATUS UI ═══ */
+function showSync(state, text){
+  const el = document.getElementById('syncStatus');
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  dot.className = 'sync-dot' + (state==='syncing'?' syncing':state==='error'?' error':'');
+  txt.textContent = text;
+  el.classList.add('show');
+  if(state !== 'syncing') setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+/* ═══ STORAGE (localStorage fallback) ═══ */
+function getCreds(){ try{return JSON.parse(localStorage.getItem(CREDS_KEY))||{user:'admin',pass:'1234'}}catch{return{user:'admin',pass:'1234'}} }
+function saveCreds(c){ localStorage.setItem(CREDS_KEY,JSON.stringify(c)); }
+function loadData(){
+  try{ const d=JSON.parse(localStorage.getItem(DATA_KEY)); if(d){profile=d.profile;links=d.links;socials=d.socials;if(d.isDark!==undefined)isDark=d.isDark;} }catch{}
+  try{ const b=JSON.parse(localStorage.getItem(BG_KEY));   if(b) bgState=b; }catch{}
+}
+function persist(){ localStorage.setItem(DATA_KEY,JSON.stringify({profile,links,socials,isDark})); }
+function persistBg(){ localStorage.setItem(BG_KEY,JSON.stringify(bgState)); }
+
+/* ═══ FIRESTORE HELPERS ═══ */
+async function fsAddLink(link){
+  if(!db) return '';
+  try{
+    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    const docRef = await addDoc(collection(db,'links'),{
+      title: link.title, desc: link.desc, url: link.url,
+      icon: link.icon, iconImg: link.iconImg,
+      localId: link.id, order: Date.now()
+    });
+    return docRef.id;
+  }catch(e){ console.error('fsAddLink',e); return ''; }
+}
+
+async function fsUpdateLink(link){
+  if(!db || !link.firestoreId) return;
+  try{
+    const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    await updateDoc(doc(db,'links',link.firestoreId),{
+      title: link.title, desc: link.desc, url: link.url,
+      icon: link.icon, iconImg: link.iconImg
+    });
+  }catch(e){ console.error('fsUpdateLink',e); }
+}
+
+async function fsDeleteLink(firestoreId){
+  if(!db || !firestoreId) return;
+  try{
+    const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    await deleteDoc(doc(db,'links',firestoreId));
+  }catch(e){ console.error('fsDeleteLink',e); }
+}
+
+async function fsSaveProfile(p){
+  if(!db) return;
+  try{
+    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    await setDoc(doc(db,'meta','profile'), p);
+  }catch(e){ console.error('fsSaveProfile',e); }
+}
+
+async function fsSaveSocials(s){
+  if(!db) return;
+  try{
+    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    await setDoc(doc(db,'meta','socials'), { list: s });
+  }catch(e){ console.error('fsSaveSocials',e); }
+}
+
+/* load all links from Firestore on init */
+async function fsLoadLinks(){
+  if(!db) return;
+  try{
+    const { collection, getDocs, query, orderBy } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    const q = query(collection(db,'links'), orderBy('order','asc'));
+    const snap = await getDocs(q);
+    if(!snap.empty){
+      links = snap.docs.map(d=>({
+        id: d.data().localId || nextId++,
+        title: d.data().title,
+        desc: d.data().desc,
+        url: d.data().url,
+        icon: d.data().icon,
+        iconImg: d.data().iconImg||'',
+        firestoreId: d.id
+      }));
+    }
+  }catch(e){ console.error('fsLoadLinks',e); }
+}
+
+async function fsLoadProfile(){
+  if(!db) return;
+  try{
+    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    const snap = await getDoc(doc(db,'meta','profile'));
+    if(snap.exists()) profile = snap.data();
+  }catch(e){ console.error('fsLoadProfile',e); }
+}
+
+async function fsLoadSocials(){
+  if(!db) return;
+  try{
+    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js");
+    const snap = await getDoc(doc(db,'meta','socials'));
+    if(snap.exists() && snap.data().list) socials = snap.data().list;
+  }catch(e){ console.error('fsLoadSocials',e); }
+}
+
+/* ═══ ICON TAB SWITCHER ═══ */
+function switchIconTab(modal, tab, btn){
+  btn.closest('.icon-tabs').querySelectorAll('.icon-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`${modal}-tab-emoji`).classList.toggle('active', tab==='emoji');
+  document.getElementById(`${modal}-tab-image`).classList.toggle('active', tab==='image');
+}
+
+/* ═══ ICON IMAGE UPLOAD ═══ */
+function handleIconImgUpload(input, modal){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    pendingIconImg[modal] = e.target.result;
+    const wrap = document.getElementById(`${modal}-icon-preview-wrap`);
+    const img  = document.getElementById(`${modal}-icon-preview-img`);
+    const hint = document.getElementById(`${modal}-icon-upload-hint`);
+    img.src = e.target.result;
+    wrap.style.display = 'flex';
+    hint.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ═══ AUTH ═══ */
+function onAdminBtnClick(){
+  if(isAdmin){
+    const bar=document.getElementById('adminBar');
+    bar.style.display = bar.style.display==='none' ? 'flex' : 'none';
+  } else {
+    document.getElementById('loginUser').value='';
+    document.getElementById('loginPass').value='';
+    document.getElementById('loginErr').textContent='';
+    openModal('adminLogin');
+  }
+}
+function doLogin(){
+  const c=getCreds();
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  if(u===c.user && p===c.pass){
+    isAdmin=true;
+    closeModal('adminLogin');
+    document.getElementById('adminBar').style.display='flex';
+    document.body.classList.add('admin-mode');
+    document.getElementById('avatarEl').onclick=()=>openModal('profile');
+    ['profileName','profileHandle','profileBio'].forEach(id=>
+      document.getElementById(id).onclick=()=>openModal('profile'));
+    document.getElementById('darkToggle').checked = isDark;
+    render();
+  } else {
+    document.getElementById('loginErr').textContent='❌ یوزەرنەیم یان پاسوۆرد هەڵەیە!';
+  }
+}
+function logout(){
+  isAdmin=false;
+  document.getElementById('adminBar').style.display='none';
+  document.body.classList.remove('admin-mode');
+  document.getElementById('avatarEl').onclick=null;
+  ['profileName','profileHandle','profileBio'].forEach(id=>
+    document.getElementById(id).onclick=null);
+  render();
+}
+
+/* ═══ DARK MODE ═══ */
+function toggleDark(dark){
+  isDark=dark;
+  document.body.classList.toggle('light-mode',!dark);
+  applyBgState();
+  persist();
+}
+
+/* ═══ BACKGROUND ═══ */
+function applyBgState(){
+  const layer=document.getElementById('bgLayer');
+  const overlay=document.getElementById('bgOverlay');
+  overlay.style.background=`rgba(0,0,0,${bgState.overlay/100})`;
+  if(bgState.type==='color'){
+    layer.style.background=bgState.value;
+    layer.style.backgroundImage='none';
+  } else if(bgState.type==='gradient'){
+    layer.style.background=bgState.value;
+    layer.style.backgroundImage='none';
+  } else if(bgState.type==='image'){
+    layer.style.background='#0a0a0f';
+    layer.style.backgroundImage=`url('${bgState.value}')`;
+    layer.style.backgroundSize='cover';
+    layer.style.backgroundPosition='center';
+  } else {
+    layer.style.background= isDark?'#0a0a0f':'#f0f2f8';
+    layer.style.backgroundImage='none';
+  }
+}
+function applyOverlay(v){ bgState.overlay=parseInt(v); applyBgState(); }
+function applyColorPick(v){ bgState={type:'color',value:v,overlay:bgState.overlay}; applyBgState(); }
+function applyGradient(g){ bgState={type:'gradient',value:g,overlay:bgState.overlay}; applyBgState(); }
+function uploadBgImg(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{ bgState={type:'image',value:e.target.result,overlay:bgState.overlay}; applyBgState(); };
+  reader.readAsDataURL(file);
+}
+function saveBgSettings(){ persistBg(); closeModal('bgCustom'); }
+
+function buildBgModal(){
+  const cp=document.getElementById('colorPresets');
+  COLOR_PRESETS.forEach(c=>{
+    const sw=document.createElement('div');
+    sw.className='color-swatch'; sw.style.background=c; sw.dataset.color=c; sw.title=c;
+    sw.onclick=()=>applyColorPick(c);
+    cp.insertBefore(sw,cp.lastElementChild);
+  });
+  const gp=document.getElementById('gradPresets');
+  GRAD_PRESETS.forEach(g=>{
+    const sw=document.createElement('div');
+    sw.className='gradient-swatch'; sw.style.background=g;
+    sw.onclick=()=>{ applyGradient(g); document.querySelectorAll('.gradient-swatch').forEach(x=>x.classList.remove('active')); sw.classList.add('active'); };
+    gp.appendChild(sw);
+  });
+}
+
+/* ═══ RENDER ═══ */
+function render(){
+  document.getElementById('profileName').textContent  =profile.name;
+  document.getElementById('profileHandle').textContent=profile.handle;
+  document.getElementById('profileBio').textContent   =profile.bio;
+  const img=document.getElementById('avatarImg');
+  const em =document.getElementById('avatarEmoji');
+  if(profile.avatar){ img.src=profile.avatar; img.style.display='block'; em.style.display='none'; }
+  else { img.style.display='none'; em.style.display='block'; }
+
+  const row=document.getElementById('socialsRow');
+  row.innerHTML=socials.map(s=>{
+    const def=SOCIALS_DEF.find(x=>x.id===s.type)||{};
+    const del=isAdmin?`<button class="social-del" onclick="deleteSocial('${s.type}')">✕</button>`:'';
+    return `<div class="social-wrap"><a class="social-btn" href="${s.url}" target="_blank" title="${def.name||s.type}">${def.emoji||'🔗'}</a>${del}</div>`;
+  }).join('');
+  document.getElementById('addSocialBtn').style.display=isAdmin?'flex':'none';
+
+  const list=document.getElementById('linksList');
+  list.innerHTML=links.map((l,i)=>{
+    const iconHtml = l.iconImg
+      ? `<img src="${l.iconImg}" alt=""/>`
+      : (l.icon||'🔗');
+    const right=isAdmin
+      ?`<div class="admin-actions"><button class="icon-btn" onclick="openEditLink(${l.id})">✏️</button><button class="icon-btn del" onclick="deleteLink(${l.id})">🗑️</button></div>`
+      :`<span class="link-arrow">↗</span>`;
+    return `<div class="link-card" data-url="${l.url}" style="animation-delay:${i*.07}s;">
+      <div class="link-icon">${iconHtml}</div>
+      <div class="link-text"><div class="link-title">${l.title}</div>${l.desc?`<div class="link-desc">${l.desc}</div>`:''}</div>
+      ${right}</div>`;
+  }).join('');
+  if(!isAdmin){
+    document.querySelectorAll('.link-card').forEach(el=>
+      el.addEventListener('click',()=>window.open(el.dataset.url,'_blank')));
+  }
+  document.getElementById('addLinkBtn').style.display=isAdmin?'flex':'none';
+}
+
+/* ═══ SHARE / QR ═══ */
+let qrInstance = null;
+function openShareModal(){
+  const url = window.location.href;
+  document.getElementById('shareUrlBox').textContent = url;
+
+  const box = document.getElementById('qrCanvas');
+  box.innerHTML = '';
+  qrInstance = new QRCode(box, {
+    text: url,
+    width: 156,
+    height: 156,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  document.getElementById('shareCopyBtn').classList.remove('copied');
+  document.getElementById('shareCopyBtn').textContent = '📋 کۆپیکردنی لینک';
+  openModal('share');
+}
+function copyShareLink(){
+  navigator.clipboard.writeText(window.location.href).then(()=>{
+    const btn = document.getElementById('shareCopyBtn');
+    btn.textContent = '✅ کۆپیکرا!';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='📋 کۆپیکردنی لینک'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+function shareToWhatsApp(){
+  window.open('https://wa.me/?text='+encodeURIComponent(window.location.href),'_blank');
+}
+function shareToTelegram(){
+  window.open('https://t.me/share/url?url='+encodeURIComponent(window.location.href),'_blank');
+}
+function downloadQR(){
+  const canvas = document.querySelector('#qrCanvas canvas');
+  if(!canvas){ alert('QR کۆد ئامادە نییە'); return; }
+  const a = document.createElement('a');
+  a.download = 'qrcode.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+/* ═══ MODALS ═══ */
+function openModal(name){
+  if(name==='profile'){
+    document.getElementById('in-name').value  =profile.name;
+    document.getElementById('in-handle').value=profile.handle;
+    document.getElementById('in-bio').value   =profile.bio;
+    pendingAvatar=profile.avatar;
+    const prev=document.getElementById('avatarUploadPreview');
+    const hint=document.getElementById('avatarUploadHint');
+    if(profile.avatar){ prev.src=profile.avatar; prev.style.display='block'; hint.style.display='none'; }
+    else { prev.style.display='none'; hint.style.display='block'; }
+  }
+  if(name==='addLink'){
+    ['in-link-title','in-link-desc','in-link-url'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('in-link-icon').value='🔗';
+    pendingIconImg.add='';
+    document.getElementById('add-tab-emoji').classList.add('active');
+    document.getElementById('add-tab-image').classList.remove('active');
+    document.querySelectorAll('#modal-addLink .icon-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
+    document.getElementById('add-icon-preview-wrap').style.display='none';
+    document.getElementById('add-icon-upload-hint').style.display='block';
+  }
+  if(name==='addSocial'){ selectedSocial=null; renderSocialGrid(); document.getElementById('in-social-url').value=''; }
+  if(name==='changePass'){
+    ['new-user','new-pass','new-pass2'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('passErr').textContent='';
+    document.getElementById('new-user').value=getCreds().user;
+  }
+  if(name==='bgCustom') document.getElementById('overlaySlider').value=bgState.overlay;
+  document.getElementById('modal-'+name).classList.add('open');
+}
+function closeModal(name){ document.getElementById('modal-'+name).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el=>
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('open'); }));
+
+/* ═══ AVATAR UPLOAD ═══ */
+function handleAvatarUpload(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    pendingAvatar=e.target.result;
+    const prev=document.getElementById('avatarUploadPreview');
+    const hint=document.getElementById('avatarUploadHint');
+    prev.src=pendingAvatar; prev.style.display='block'; hint.style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ═══ ACTIONS ═══ */
+async function saveProfile(){
+  profile.name  =document.getElementById('in-name').value  ||profile.name;
+  profile.handle=document.getElementById('in-handle').value||profile.handle;
+  profile.bio   =document.getElementById('in-bio').value   ||profile.bio;
+  if(pendingAvatar) profile.avatar=pendingAvatar;
+  persist();
+  closeModal('profile');
+  render();
+  // sync to Firestore
+  showSync('syncing','سەیڤ دەکرێت...');
+  await fsSaveProfile(profile);
+  showSync('ok','پرۆفایل سەیڤکرا ✓');
+}
+
+async function saveLink(){
+  const title=document.getElementById('in-link-title').value.trim();
+  const url  =document.getElementById('in-link-url').value.trim();
+  if(!title||!url) return;
+  const useImg = document.getElementById('add-tab-image').classList.contains('active');
+  const newLink = {
+    id:nextId++,
+    title,
+    desc:document.getElementById('in-link-desc').value.trim(),
+    url,
+    icon: useImg ? '' : (document.getElementById('in-link-icon').value.trim()||'🔗'),
+    iconImg: useImg ? pendingIconImg.add : '',
+    firestoreId: ''
+  };
+  links.push(newLink);
+  persist();
+  closeModal('addLink');
+  render();
+  // sync to Firestore
+  showSync('syncing','سەیڤ دەکرێت...');
+  const fsId = await fsAddLink(newLink);
+  newLink.firestoreId = fsId;
+  persist();
+  showSync('ok','لینک زیادکرا ✓');
+}
+
+function openEditLink(id){
+  const l=links.find(x=>x.id===id); if(!l) return;
+  document.getElementById('edit-link-id').value   =id;
+  document.getElementById('edit-link-title').value=l.title;
+  document.getElementById('edit-link-desc').value =l.desc;
+  document.getElementById('edit-link-url').value  =l.url;
+  document.getElementById('edit-link-icon').value =l.icon||'';
+  pendingIconImg.edit = l.iconImg||'';
+
+  const useImg = !!l.iconImg;
+  document.getElementById('edit-tab-emoji').classList.toggle('active',!useImg);
+  document.getElementById('edit-tab-image').classList.toggle('active',useImg);
+  document.getElementById('edit-tab-emoji-btn').classList.toggle('active',!useImg);
+  document.getElementById('edit-tab-image-btn').classList.toggle('active',useImg);
+
+  const wrap=document.getElementById('edit-icon-preview-wrap');
+  const img =document.getElementById('edit-icon-preview-img');
+  const hint=document.getElementById('edit-icon-upload-hint');
+  if(l.iconImg){ img.src=l.iconImg; wrap.style.display='flex'; hint.style.display='none'; }
+  else{ wrap.style.display='none'; hint.style.display='block'; }
+
+  document.getElementById('modal-editLink').classList.add('open');
+}
+
+async function updateLink(){
+  const id=parseInt(document.getElementById('edit-link-id').value);
+  const l=links.find(x=>x.id===id); if(!l) return;
+  const useImg = document.getElementById('edit-tab-image').classList.contains('active');
+  l.title  =document.getElementById('edit-link-title').value.trim()||l.title;
+  l.desc   =document.getElementById('edit-link-desc').value.trim();
+  l.url    =document.getElementById('edit-link-url').value.trim()  ||l.url;
+  l.icon   = useImg ? '' : (document.getElementById('edit-link-icon').value.trim()||l.icon);
+  l.iconImg= useImg ? pendingIconImg.edit : '';
+  persist();
+  closeModal('editLink');
+  render();
+  // sync to Firestore
+  showSync('syncing','سەیڤ دەکرێت...');
+  await fsUpdateLink(l);
+  showSync('ok','لینک نوێکرایەوە ✓');
+}
+
+async function deleteLink(id){
+  const l = links.find(x=>x.id===id);
+  links = links.filter(x=>x.id!==id);
+  persist();
+  render();
+  if(l && l.firestoreId){
+    showSync('syncing','سرێندرا...');
+    await fsDeleteLink(l.firestoreId);
+    showSync('ok','لینک سرێندرا ✓');
+  }
+}
+
+async function deleteSocial(t){
+  socials=socials.filter(x=>x.type!==t);
+  persist();
+  render();
+  showSync('syncing','سەیڤ دەکرێت...');
+  await fsSaveSocials(socials);
+  showSync('ok','سۆشیاڵ سرێندرا ✓');
+}
+
+function renderSocialGrid(){
+  document.getElementById('socialGrid').innerHTML=SOCIALS_DEF.map(s=>
+    `<div class="social-option ${selectedSocial===s.id?'selected':''}" onclick="selectSocial('${s.id}')">
+      <span style="font-size:22px;">${s.emoji}</span><span>${s.name}</span></div>`).join('');
+}
+function selectSocial(id){
+  selectedSocial=id; renderSocialGrid();
+  document.getElementById('in-social-url').placeholder=`https://${id}.com/username`;
+}
+async function saveSocial(){
+  const url=document.getElementById('in-social-url').value.trim();
+  if(!selectedSocial||!url) return;
+  const ex=socials.find(x=>x.type===selectedSocial);
+  if(ex) ex.url=url; else socials.push({type:selectedSocial,url});
+  persist();
+  closeModal('addSocial');
+  render();
+  showSync('syncing','سەیڤ دەکرێت...');
+  await fsSaveSocials(socials);
+  showSync('ok','سۆشیاڵ سەیڤکرا ✓');
+}
+
+function changePass(){
+  const u=document.getElementById('new-user').value.trim();
+  const p=document.getElementById('new-pass').value;
+  const p2=document.getElementById('new-pass2').value;
+  const err=document.getElementById('passErr');
+  if(!u||!p){err.textContent='❌ خانەکان پڕ بکەرەوە';return;}
+  if(p!==p2){err.textContent='❌ پاسوۆردەکان یەک نین';return;}
+  saveCreds({user:u,pass:p});
+  err.style.color='#00f5d4'; err.textContent='✅ پاراستراو!';
+  setTimeout(()=>closeModal('changePass'),900);
+}
+
+/* ═══ INIT ═══ */
+loadData();
+buildBgModal();
+document.body.classList.toggle('light-mode',!isDark);
+applyBgState();
+render();
+</script>
+
+<!-- Firebase Init + Load from Firestore -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBYQCfAkXy_LDcInnwnUyRQzwwqx8QjHzk",
+    authDomain: "amz-biolink.firebaseapp.com",
+    projectId: "amz-biolink",
+    storageBucket: "amz-biolink.firebasestorage.app",
+    messagingSenderId: "1039808700529",
+    appId: "1:1039808700529:web:0cf492bf0dcae88778fbd0",
+    measurementId: "G-7EWJP1XK5R"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const firestoreDb = getFirestore(app);
+
+  // expose db globally so the non-module script can use it
+  window.db = firestoreDb;
+
+  // load data from Firestore then re-render
+  try {
+    await window.fsLoadProfile();
+    await window.fsLoadLinks();
+    await window.fsLoadSocials();
+    window.persist();
+    window.render();
+    console.log("✅ داتا لە Firestore هێنرایەوە");
+  } catch(e){
+    console.warn("Firestore load failed, using localStorage:", e);
+  }
+</script>
+
+<script>
+  // expose functions needed by module script
+  window.fsLoadProfile = fsLoadProfile;
+  window.fsLoadLinks   = fsLoadLinks;
+  window.fsLoadSocials = fsLoadSocials;
+  window.persist = persist;
+  window.render  = render;
+</script>
+
+</body>
+</html>
