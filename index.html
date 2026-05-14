@@ -1185,9 +1185,24 @@ render();
   const getMyLinks = () => {
     // هێنانی داتاکان بە شێوەی زیندوو
    onSnapshot(collection(db, "links"), (snapshot) => {
-    console.log("Database updated! New count:", snapshot.size); // Add this line
+    console.log("Firebase Check: Listener Triggered!"); // Does this show up?
+    
+    if (snapshot.empty) {
+        console.warn("Firebase Check: The collection is EMPTY.");
+    }
+
     const container = document.getElementById("links-container");
-    // ... rest of your code
+    container.innerHTML = ""; 
+
+    snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        console.log("Firebase Check: Received Doc ->", data); // See the actual data
+        
+        container.innerHTML += `
+            <div class="link-card">
+                <a href="${data.url}" target="_blank" class="link-btn">${data.name}</a>
+            </div>`;
+    });
 });
         // دروستکردنی شێوازی لینکەکە (دیزاینەکەی بە ئارەزووی خۆت بگۆڕە)
         container.innerHTML += `
